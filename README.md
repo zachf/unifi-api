@@ -1,6 +1,6 @@
 # UniFi Network API client
 
-A Python 3.10+ client and command line tool for the local UniFi Network REST API. No runtime dependencies are required. The API key is loaded from a JSON config file and sent in the `X-API-Key` header.
+A Python 3.7+ client and command line tool for the local UniFi Network REST API, including PyPy 3.7. No runtime dependencies are required. The API key is loaded from a JSON config file and sent in the `X-API-Key` header.
 
 ## Setup
 

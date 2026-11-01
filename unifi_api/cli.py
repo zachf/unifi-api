@@ -60,7 +60,11 @@ def execute(client, args):
         if args.command != "sites":
             kwargs["site_id"] = args.site
         result = list(getattr(client, args.command)(**kwargs))
-    exclude_columns = {"id", "uplinkDeviceId", "access.type"} if args.command in {"sites", "clients"} else ()
+    exclude_columns = {
+        "sites": {"id", "uplinkDeviceId", "access.type"},
+        "clients": {"id", "uplinkDeviceId", "access.type"},
+        "devices": {"id"},
+    }.get(args.command, ())
     print(render(result, args.output_format, exclude_columns=exclude_columns))
 
 

@@ -4,6 +4,7 @@ import json
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 from urllib.parse import urlsplit
 
 
@@ -18,8 +19,8 @@ class Config:
     api_path: str = "/proxy/network/integration/v1"
     verify_ssl: bool = True
     timeout: float = 30
-    site_id: str | None = None
-    ca_bundle: str | None = None
+    site_id: Optional[str] = None
+    ca_bundle: Optional[str] = None
 
     def __post_init__(self):
         if not isinstance(self.base_url, str):
