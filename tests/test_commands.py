@@ -29,6 +29,8 @@ class CommandsTests(unittest.TestCase):
         self.assertEqual(method, "GET")
         if path == "sites":
             return {"data": [{"id": "site-a", "name": "Home"}, {"id": "site-b", "name": "Office"}], "totalCount": 2}
+        if path == "info":
+            return {"applicationVersion": "9.4.19"}
         collection = path.split("/", 2)[2]
         collections = {"devices": self.devices, "clients": self.clients,
                        "networks": [{"id": "net-a", "name": "Office LAN", "vlanId": 10, "enabled": True}],
@@ -41,6 +43,8 @@ class CommandsTests(unittest.TestCase):
                 {"idx": 1, "state": "UP", "speedMbps": 1000, "poe": {"enabled": True}},
                 {"idx": 2, "state": "DOWN", "maxSpeedMbps": 1000},
             ]}}
+        if collection == "devices/switch-a/statistics/latest":
+            return {"uptimeSec": 3600, "cpuUtilizationPct": 12.5, "memoryUtilizationPct": 40.1}
         if collection == "clients/laptop":
             return {"id": "laptop", "connectedAt": "2026-11-01T10:00:00Z"}
         self.fail("Unexpected API path: " + path)
@@ -57,7 +61,7 @@ class CommandsTests(unittest.TestCase):
         self.assertEqual((code, err), (0, ""))
         self.assertIn("Office", out)
         paths = [call[0][1] for call in self.request.call_args_list]
-        self.assertEqual(paths, ["sites", "sites/site-b/devices", "sites/site-a/clients", "sites",
+        self.assertEqual(paths, ["sites", "sites/site-b/devices", "sites/site-a/clients", "sites/site-a/devices", "sites",
                                  "sites/site-b/devices", "sites/site-b/clients", "sites/site-b/networks",
                                  "sites/site-b/wifi/broadcasts", "sites/site-b/wans"])
         self.assertEqual(self.client.config.site_id, "site-a")
@@ -141,6 +145,39 @@ class CommandsTests(unittest.TestCase):
         self.assertEqual(json.loads(out)["name"], "Laptop")
         self.assertIn("connectedAt", json.loads(out))
 
+    def test_stats_selects_device_and_merges_latest_statistics(self):
+        code, out, err = self.run_cli(["stats", "aa:bb:cc:dd:ee:ff", "--json"])
+        self.assertEqual((code, err), (0, ""))
+        result = json.loads(out)
+        self.assertEqual(result["name"], "Office Switch")
+        self.assertEqual(result["cpuUtilizationPct"], 12.5)
+        self.assertEqual(self.request.call_args[0][1], "sites/site-a/devices/switch-a/statistics/latest")
+
+    def test_info_does_not_require_a_site(self):
+        self.client.config = Config("https://controller.local", "test-key")
+        code, out, err = self.run_cli(["info", "--json"])
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(json.loads(out)["applicationVersion"], "9.4.19")
+
+    def test_clients_include_uplink_device_name_and_connection_duration(self):
+        self.clients[0]["connectedAt"] = "2026-11-01T10:00:00Z"
+        self.clients.append({"id": "phone", "name": "Phone", "type": "WIRELESS"})
+        code, out, err = self.run_cli(["clients", "--json"])
+        self.assertEqual((code, err), (0, ""))
+        rows = json.loads(out)
+        self.assertEqual(rows[0]["uplinkDevice"], "Office Switch")
+        self.assertRegex(rows[0]["connectedFor"], r"\d+h \d+m$")
+        self.assertNotIn("uplinkDevice", rows[1])
+
+    def test_duration_formatting(self):
+        from datetime import datetime, timezone
+        from unifi_api.commands import _duration
+        now = datetime(2026, 11, 3, 12, 30, tzinfo=timezone.utc)
+        self.assertEqual(_duration("2026-11-01T10:00:00Z", now), "2d 2h 30m")
+        self.assertEqual(_duration("2026-11-03T12:00:00+00:00", now), "0h 30m")
+        self.assertIsNone(_duration("not a date", now))
+        self.assertIsNone(_duration("2026-11-04T00:00:00Z", now))
+
     def test_find_searches_both_collections(self):
         for selector, expected in (("Office", "device"), ("10.0.0", "client"), ("1122.3344.5566", "client")):
             code, out, err = self.run_cli(["find", selector, "--json"])
@@ -178,7 +215,8 @@ class CommandsTests(unittest.TestCase):
         with patch("unifi_api.cli.time.sleep", side_effect=KeyboardInterrupt()):
             code, _, _ = self.run_cli(["shell"], ["watch clients", "clients"])
         self.assertEqual(code, 130)
-        self.assertEqual(self.request.call_count, 1)
+        # One refresh: the client list plus uplink device names; the second command never runs.
+        self.assertEqual(self.request.call_count, 2)
 
     def test_watch_rejects_writes_and_nested_wrappers(self):
         for target in ("request", "use", "watch", "export"):

@@ -66,6 +66,9 @@ All queries work in the prompt and as direct commands, for example `python -m un
 | `device NAME-IP-MAC-OR-UUID` | Retrieve one device's details |
 | `client NAME-IP-MAC-OR-UUID` | Retrieve one connected client's details |
 | `ports DEVICE` | Show port indexes, states, negotiated/max speeds, and PoE fields |
+| `stats DEVICE` | Show a device's latest statistics (CPU, memory, uptime, load, throughput) as returned by the controller |
+| `info` | Show the Network application version; needs no site |
+| `clients` | List clients, adding `uplinkDevice` (resolved device name) and `connectedFor` (duration since `connectedAt`) where available |
 | `wifi` | List Wi-Fi broadcast settings, including enabled state, frequencies, and security type where returned |
 | `wan` | List available WAN interface definitions |
 | `find TEXT` | Search device and client names, IPs, MACs, and UUIDs |

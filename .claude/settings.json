@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -m unittest discover -s tests 2>&1)"
+    ]
+  }
+}

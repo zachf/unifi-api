@@ -49,9 +49,12 @@ def build_parser():
             command.add_argument("--filter", help="UniFi filter expression, if supported by the endpoint")
         if name != "sites":
             command.add_argument("--site", help="Site UUID (defaults to config site_id)")
-    for name in ("status", "device", "client", "ports", "find", "use"):
+    info = commands.add_parser("info", help="Show the Network application version")
+    _output_option(info, default=argparse.SUPPRESS)
+    for name in ("status", "device", "client", "ports", "stats", "find", "use"):
         command = commands.add_parser(name, help={
             "status": "Show a site summary screen with devices, clients, networks, Wi-Fi, and WAN",
+            "stats": "Show a device's latest CPU, memory, uptime, and throughput statistics",
             "device": "Look up a device by name, IP, MAC, or UUID",
             "client": "Look up a client by name, IP, MAC, or UUID",
             "ports": "Show a device's ports, link speeds, and PoE information",
@@ -158,6 +161,8 @@ _COMMANDS = [
     {"Command": "device NAME-IP-MAC-OR-UUID", "Description": "Show device details"},
     {"Command": "client NAME-IP-MAC-OR-UUID", "Description": "Show client details"},
     {"Command": "ports DEVICE", "Description": "Show ports, link speeds, and PoE"},
+    {"Command": "stats DEVICE", "Description": "Show latest device CPU, memory, uptime, and throughput"},
+    {"Command": "info", "Description": "Show the Network application version"},
     {"Command": "wifi", "Description": "List Wi-Fi broadcasts and settings"},
     {"Command": "wan", "Description": "List WAN interface definitions"},
     {"Command": "find TEXT", "Description": "Search devices and clients"},

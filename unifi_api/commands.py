@@ -2,12 +2,13 @@
 
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from .status import collect_status
 
 
 READ_COMMANDS = ("sites", "devices", "clients", "networks", "wifi", "wan",
-                 "status", "device", "client", "ports", "find")
+                 "status", "device", "client", "ports", "find", "stats", "info")
 
 
 @dataclass
@@ -46,6 +47,39 @@ def select(records, selector, kind):
     return found[0]
 
 
+def _duration(start, now=None):
+    try:
+        started = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if started.tzinfo is None:
+        return None
+    seconds = int(((now or datetime.now(timezone.utc)) - started).total_seconds())
+    if seconds < 0:
+        return None
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
+    minutes = seconds // 60
+    return f"{days}d {hours}h {minutes}m" if days else f"{hours}h {minutes}m"
+
+
+def enrich_clients(client, clients, site):
+    # Resolve uplink device names only when a client references one.
+    if any(c.get("uplinkDeviceId") for c in clients):
+        names = {d["id"]: d.get("name", d.get("macAddress", d["id"])) for d in client.devices(site)}
+    else:
+        names = {}
+    result = []
+    for item in clients:
+        row = dict(item)
+        if item.get("uplinkDeviceId"):
+            row["uplinkDevice"] = names.get(item["uplinkDeviceId"])
+        if item.get("connectedAt"):
+            row["connectedFor"] = _duration(item["connectedAt"])
+        result.append(row)
+    return result
+
+
 def query(client, args, session):
     site = getattr(args, "site", None) or session.site_id
     command = args.command
@@ -55,7 +89,14 @@ def query(client, args, session):
             kwargs["filter"] = args.filter
         if command != "sites":
             kwargs["site_id"] = site
-        return list(getattr(client, command)(**kwargs))
+        items = list(getattr(client, command)(**kwargs))
+        return enrich_clients(client, items, site) if command == "clients" else items
+    if command == "info":
+        return client.info()
+    if command == "stats":
+        item = select(client.devices(site), args.selector, "device")
+        stats = client.device_statistics(item["id"], site) or {}
+        return dict({key: item[key] for key in ("name", "model", "state") if key in item}, **stats)
     if command == "use":
         selected = select(client.sites(), args.selector, "site")
         session.site_id = selected["id"]

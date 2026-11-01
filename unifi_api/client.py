@@ -119,6 +119,13 @@ class UniFiClient:
     def wan(self, site_id=None, **kwargs):
         return self.iter_items(self._site_path(site_id, "wans"), **kwargs)
 
+    def info(self):
+        return self.request("GET", "info")
+
+    def device_statistics(self, device_id, site_id=None):
+        return self.request("GET", self._site_path(
+            site_id, "devices/" + quote(device_id, safe="") + "/statistics/latest"))
+
     def device_details(self, device_id, site_id=None):
         return self.request("GET", self._site_path(site_id, "devices/" + quote(device_id, safe="")))
 
