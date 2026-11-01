@@ -135,6 +135,9 @@ def interactive(client, output_format="table"):
 
 
 def main(argv=None):
+    # Windows redirected output can default to cp1252, which lacks box drawing.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     args = build_parser().parse_args(argv)
     try:
         client = UniFiClient.from_config(args.config)

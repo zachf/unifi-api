@@ -31,19 +31,21 @@ def _table(records, exclude_columns=()):
     headers = [_cell(column) for column in columns]
     cells = [[_cell(row[column]) if column in row else "" for column in columns] for row in rows]
     widths = [min(40, max(1, len(headers[i]), *(len(row[i]) for row in cells))) for i in range(len(columns))]
-    border = "+" + "+".join("-" * (width + 2) for width in widths) + "+"
-    lines = [border]
+    def border(left, junction, right):
+        return left + junction.join("─" * (width + 2) for width in widths) + right
+
+    lines = [border("┌", "┬", "┐")]
 
     def append_row(row):
         wrapped = [textwrap.wrap(value, width=width, replace_whitespace=False, drop_whitespace=False) or [""] for value, width in zip(row, widths)]
         for index in range(max(map(len, wrapped))):
-            lines.append("| " + " | ".join((value[index] if index < len(value) else "").ljust(width) for value, width in zip(wrapped, widths)) + " |")
+            lines.append("│ " + " │ ".join((value[index] if index < len(value) else "").ljust(width) for value, width in zip(wrapped, widths)) + " │")
 
     append_row(headers)
-    lines.append(border)
-    for row in cells:
+    lines.append(border("├", "┼", "┤"))
+    for index, row in enumerate(cells):
         append_row(row)
-        lines.append(border)
+        lines.append(border("└", "┴", "┘") if index == len(cells) - 1 else border("├", "┼", "┤"))
     return "\n".join(lines)
 
 

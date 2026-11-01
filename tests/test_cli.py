@@ -15,7 +15,8 @@ class OutputTests(unittest.TestCase):
                          {"id": "b", "ipAddress": "10.0.0.2"}])
         for value in ("id", "Office", "access.type", "GUEST", "ipAddress", "10.0.0.2"):
             self.assertIn(value, output)
-        self.assertTrue(output.startswith("+"))
+        self.assertTrue(output.startswith("┌"))
+        self.assertTrue(output.endswith("┘"))
 
     def test_page_metadata_and_rows(self):
         output = render({"totalCount": 1, "data": [{"name": "Office"}]})
@@ -27,7 +28,7 @@ class OutputTests(unittest.TestCase):
         self.assertIn("no response body", render(None))
         self.assertIn("true", render(True))
         self.assertIn("empty object", render({}))
-        self.assertIn("|", render({"": ""}))
+        self.assertIn("│", render({"": ""}))
         self.assertIn("x" * 40, render({"name": "x" * 90}))
 
     def test_control_characters_are_visible(self):
@@ -58,7 +59,7 @@ class CLITests(unittest.TestCase):
     def test_one_shot_table_and_json_before_or_after_command(self):
         code, output, _ = self.run_cli(["sites"])
         self.assertEqual(code, 0)
-        self.assertIn("| name", output)
+        self.assertIn("│ name", output)
         for column in ("id", "uplinkDeviceId", "access.type"):
             self.assertNotIn(column, output)
         for args in (["sites", "--json"], ["--json", "sites"]):
@@ -87,8 +88,8 @@ class CLITests(unittest.TestCase):
         code, output, _ = self.run_cli(["shell"], ["sites --json", "format json", "sites", "format table", "sites", "quit"])
         self.assertEqual(code, 0)
         self.assertEqual(output.count('"id": "site-1"'), 2)
-        self.assertIn("| Office", output)
-        self.assertNotIn("| site-1", output)
+        self.assertIn("│ Office", output)
+        self.assertNotIn("│ site-1", output)
 
     def test_shell_quotes_and_windows_paths(self):
         self.client.request.return_value = None
