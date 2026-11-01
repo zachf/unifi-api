@@ -20,13 +20,35 @@ The supplied configuration targets `https://opus2.local:11443` and `/proxy/netwo
 Run directly from the project directory:
 
 ```powershell
+python -m unifi_api
+```
+
+This opens the interactive `unifi>` command prompt and displays the available commands in a table. You can also start it explicitly with `python -m unifi_api shell`. It loads the config once and reuses the connection settings throughout the session.
+
+```text
+unifi> sites
+unifi> devices --site YOUR_SITE_UUID
+unifi> clients --site YOUR_SITE_UUID --json
+unifi> format json
+unifi> sites
+unifi> format table
+unifi> help request
+unifi> exit
+```
+
+Use `help` to display the command table, `help COMMAND` for options, and `exit` or `quit` to close the prompt. Ctrl+C cancels the current command; EOF closes the prompt (Ctrl+Z then Enter on Windows). Command errors leave the prompt open. Quote arguments containing spaces, including Windows file paths.
+
+Existing commands also work directly:
+
+```powershell
 python -m unifi_api sites
+python -m unifi_api sites --json
 python -m unifi_api devices --site YOUR_SITE_UUID
 python -m unifi_api clients --site YOUR_SITE_UUID
 python -m unifi_api --config config.json request GET sites/YOUR_SITE_UUID/networks --param limit=25 --param offset=0
 ```
 
-Copy a site UUID from `sites` into the optional `site_id` config setting to omit `--site`. The list commands retrieve all pages; `--limit` controls the page size. `--filter` passes a UniFi filter expression where supported. Output is JSON; errors go to stderr and return a nonzero exit code.
+Copy a site UUID from `sites` into the optional `site_id` config setting to omit `--site`. The list commands retrieve all pages; `--limit` controls the page size. `--filter` passes a UniFi filter expression where supported. API results are tables by default. Add `--json` to any API command to preserve the full JSON response for scripts. In the prompt, `format table` or `format json` changes the session default; `--json` overrides it for one command. Nested object fields appear as dotted columns; long cells wrap without truncation. Paginated responses from `request` show metadata and data in separate tables. Errors go to stderr, and failed direct commands return a nonzero exit code.
 
 The general `request` command accepts GET, POST, PUT, PATCH, and DELETE. Paths are relative to `api_path`; pass query parameters using repeated `--param KEY=VALUE`. For a write request, pass a JSON file with `--body payload.json`. Writes execute immediately, so use the documented endpoint and review the payload first. Endpoint availability and payload schemas depend on your installed Network version.
 
