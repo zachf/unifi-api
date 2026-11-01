@@ -62,7 +62,7 @@ All queries work in the prompt and as direct commands, for example `python -m un
 | Command | Purpose |
 | --- | --- |
 | `use NAME-OR-UUID` | Select a site for this session |
-| `status` | Count devices by reported state and connected clients by type |
+| `status` | Show a site summary screen with device states, client counts, firmware updates, networks, Wi-Fi, and WAN definitions |
 | `device NAME-IP-MAC-OR-UUID` | Retrieve one device's details |
 | `client NAME-IP-MAC-OR-UUID` | Retrieve one connected client's details |
 | `ports DEVICE` | Show port indexes, states, negotiated/max speeds, and PoE fields |
@@ -85,6 +85,8 @@ unifi> watch clients --interval 5
 ```
 
 Lookups prefer exact matches, then accept a unique partial match. MAC addresses accept colon, dash, dot, or unseparated forms. Ambiguous lookups report an error instead of choosing a device. `find` returns all matches. Add `--site SITE_UUID` or `--json` to any query.
+
+Run `status` for a summary screen with the site name and timestamp, overview counts, device/client state breakdowns, device IPs and client counts, available firmware updates, network VLANs, Wi-Fi broadcasts, WAN definitions, and observations needing review. `status --json` returns the snapshot as structured data; `watch status --interval 5` refreshes it. With no selected or configured site, status automatically uses the only available site; multiple sites require an explicit choice. An unavailable optional endpoint is shown as unavailable with its error, rather than as a zero count. Device and client queries must succeed to produce a summary.
 
 The ports command preserves fields actually returned by the controller. `connectedClients: null` means client-to-port associations are unavailable; it does not mean that the port has no clients. The current controller supplies an upstream device ID without a port index. Clients can be associated when a controller also returns `uplinkPortIdx`. WAN definitions currently expose names and IDs, not internet health or connection status. Device health in `status` is the controller's reported device state, not an active connectivity test. Unsupported endpoints report the API error rather than silently returning an empty result.
 

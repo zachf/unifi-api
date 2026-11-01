@@ -60,3 +60,54 @@ def render(result, output_format="table", *, exclude_columns=()):
     if isinstance(result, list):
         return _table(result, exclude_columns)
     return _table([result], exclude_columns)
+
+
+def render_status(summary):
+    """Render the status snapshot as readable sections instead of one wide row."""
+    lines = ["UNIFI NETWORK STATUS", f"Site: {_cell(summary['siteName'])}",
+             f"Updated: {_cell(summary['updatedAt'])}"]
+
+    def section(title, rows):
+        lines.extend(["", title, _table(rows)])
+
+    def count(key):
+        return "Unavailable" if summary[key] is None else len(summary[key])
+
+    section("Overview", [
+        {"Metric": "Devices", "Value": summary["devices"]},
+        {"Metric": "Connected clients", "Value": summary["connectedClients"]},
+        {"Metric": "Firmware updates available", "Value": summary["firmwareUpdates"]},
+        {"Metric": "Networks", "Value": count("networks")},
+        {"Metric": "Wi-Fi broadcasts", "Value": count("wifi")},
+        {"Metric": "WAN definitions", "Value": count("wan")},
+    ])
+    section("Device states / client types", [
+        {"Category": category, "State / type": state, "Count": number}
+        for category, counts in (("Device", summary["deviceStates"]), ("Client", summary["clientTypes"]))
+        for state, number in sorted(counts.items())
+    ])
+    section("Devices (clients grouped by reported upstream device)", [
+        {"Name": d.get("name", "Unknown"), "Model": d.get("model", "Unknown"),
+         "State": d.get("state", "UNKNOWN"), "IP address": d.get("ipAddress", "Unavailable"),
+         "Clients": d["clients"], "Update": "Available" if d.get("firmwareUpdatable") is True else
+         "No" if d.get("firmwareUpdatable") is False else "Unknown"}
+        for d in summary["deviceDetails"]
+    ])
+    for key, title, fields in (
+        ("networks", "Networks", (("name", "Name"), ("vlanId", "VLAN"), ("enabled", "Enabled"))),
+        ("wifi", "Wi-Fi broadcasts", (("name", "Name"), ("enabled", "Enabled"),
+                                       ("broadcastingFrequenciesGHz", "Bands (GHz)"),
+                                       ("securityConfiguration.type", "Security"))),
+        ("wan", "WAN interface definitions", (("name", "Name"),)),
+    ):
+        if summary[key] is None:
+            lines.extend(["", title, "Unavailable (see collection warnings below)."])
+        else:
+            rows = [_flatten(item) for item in summary[key]]
+            section(title, [{label: row.get(field, "Unavailable") for field, label in fields} for row in rows])
+    lines.extend(["", "WAN definitions do not indicate internet connectivity."])
+    if summary["alerts"]:
+        section("Needs review", [{"Observation": item} for item in summary["alerts"]])
+    if summary["warnings"]:
+        section("Collection warnings", [{"Warning": item} for item in summary["warnings"]])
+    return "\n".join(lines)

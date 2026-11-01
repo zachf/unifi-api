@@ -1,8 +1,9 @@
 """Read-only network queries and session state."""
 
 import re
-from collections import Counter
 from dataclasses import dataclass
+
+from .status import collect_status
 
 
 READ_COMMANDS = ("sites", "devices", "clients", "networks", "wifi", "wan",
@@ -60,13 +61,7 @@ def query(client, args, session):
         session.site_id = selected["id"]
         return {"site": selected.get("name", selected["id"]), "site_id": selected["id"]}
     if command == "status":
-        devices = list(client.devices(site))
-        clients = list(client.clients(site))
-        return {"site_id": site or client.config.site_id,
-                "devices": len(devices),
-                "deviceStates": dict(Counter(str(d.get("state", "UNKNOWN")) for d in devices)),
-                "connectedClients": len(clients),
-                "clientTypes": dict(Counter(str(c.get("type", "UNKNOWN")) for c in clients))}
+        return collect_status(client, site)
     if command == "find":
         if not args.selector.strip():
             raise ValueError("Search text must not be empty")

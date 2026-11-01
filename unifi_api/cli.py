@@ -12,7 +12,7 @@ from .client import APIError, UniFiClient
 from .config import ConfigError
 from .commands import READ_COMMANDS, Session, query
 from .export import export_csv
-from .output import render
+from .output import render, render_status
 
 
 def _positive(value):
@@ -51,7 +51,7 @@ def build_parser():
             command.add_argument("--site", help="Site UUID (defaults to config site_id)")
     for name in ("status", "device", "client", "ports", "find", "use"):
         command = commands.add_parser(name, help={
-            "status": "Summarize device states and connected clients",
+            "status": "Show a site summary screen with devices, clients, networks, Wi-Fi, and WAN",
             "device": "Look up a device by name, IP, MAC, or UUID",
             "client": "Look up a client by name, IP, MAC, or UUID",
             "ports": "Show a device's ports, link speeds, and PoE information",
@@ -137,7 +137,10 @@ def execute(client, args, session=None):
         "clients": {"id", "uplinkDeviceId", "access.type"},
         "devices": {"id"},
     }.get(args.command, ())
-    print(render(result, args.output_format, exclude_columns=exclude_columns))
+    if args.command == "status" and args.output_format == "table":
+        print(render_status(result))
+    else:
+        print(render(result, args.output_format, exclude_columns=exclude_columns))
 
 
 def _report_error(exc):
@@ -151,7 +154,7 @@ _COMMANDS = [
     {"Command": "clients [--site UUID]", "Description": "List connected clients"},
     {"Command": "networks [--site UUID]", "Description": "List networks"},
     {"Command": "use NAME-OR-UUID", "Description": "Select a site for this session"},
-    {"Command": "status", "Description": "Summarize device states and client counts"},
+    {"Command": "status", "Description": "Show the site summary screen"},
     {"Command": "device NAME-IP-MAC-OR-UUID", "Description": "Show device details"},
     {"Command": "client NAME-IP-MAC-OR-UUID", "Description": "Show client details"},
     {"Command": "ports DEVICE", "Description": "Show ports, link speeds, and PoE"},
