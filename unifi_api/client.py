@@ -101,7 +101,7 @@ class UniFiClient:
     def _site_path(self, site_id, collection):
         site_id = site_id or self.config.site_id
         if not site_id:
-            raise ValueError("Provide --site or set site_id in the config file")
+            raise ValueError("Select a site with use, provide --site, or set site_id in the config file")
         return f"sites/{quote(site_id, safe='')}/{collection}"
 
     def devices(self, site_id=None, **kwargs):
@@ -112,3 +112,15 @@ class UniFiClient:
 
     def networks(self, site_id=None, **kwargs):
         return self.iter_items(self._site_path(site_id, "networks"), **kwargs)
+
+    def wifi(self, site_id=None, **kwargs):
+        return self.iter_items(self._site_path(site_id, "wifi/broadcasts"), **kwargs)
+
+    def wan(self, site_id=None, **kwargs):
+        return self.iter_items(self._site_path(site_id, "wans"), **kwargs)
+
+    def device_details(self, device_id, site_id=None):
+        return self.request("GET", self._site_path(site_id, "devices/" + quote(device_id, safe="")))
+
+    def client_details(self, client_id, site_id=None):
+        return self.request("GET", self._site_path(site_id, "clients/" + quote(client_id, safe="")))

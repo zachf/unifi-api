@@ -1,0 +1,97 @@
+"""Read-only network queries and session state."""
+
+import re
+from collections import Counter
+from dataclasses import dataclass
+
+
+READ_COMMANDS = ("sites", "devices", "clients", "networks", "wifi", "wan",
+                 "status", "device", "client", "ports", "find")
+
+
+@dataclass
+class Session:
+    site_id: str = None
+
+
+def _mac(value):
+    value = re.sub(r"[:.\-]", "", value).lower()
+    return value if re.fullmatch(r"[0-9a-f]{12}", value) else None
+
+
+def matches(record, text, exact=False):
+    for field in ("id", "name", "ipAddress", "macAddress"):
+        value = str(record.get(field, ""))
+        if value.casefold() == text.casefold():
+            return True
+        if field == "macAddress" and _mac(text) and _mac(text) == _mac(value):
+            return True
+        if not exact and text.casefold() in value.casefold():
+            return True
+    return False
+
+
+def select(records, selector, kind):
+    if not selector.strip():
+        raise ValueError(f"Provide a {kind} name or identifier")
+    records = list(records)
+    found = [item for item in records if matches(item, selector, exact=True)]
+    if not found:
+        found = [item for item in records if matches(item, selector)]
+    if not found:
+        raise ValueError(f"No matching {kind}")
+    if len(found) != 1:
+        raise ValueError(f"Multiple matching {kind}s; use an exact name, UUID, IP, or MAC address")
+    return found[0]
+
+
+def query(client, args, session):
+    site = getattr(args, "site", None) or session.site_id
+    command = args.command
+    if command in {"sites", "devices", "clients", "networks", "wifi", "wan"}:
+        kwargs = {"limit": args.limit}
+        if command != "wan":
+            kwargs["filter"] = args.filter
+        if command != "sites":
+            kwargs["site_id"] = site
+        return list(getattr(client, command)(**kwargs))
+    if command == "use":
+        selected = select(client.sites(), args.selector, "site")
+        session.site_id = selected["id"]
+        return {"site": selected.get("name", selected["id"]), "site_id": selected["id"]}
+    if command == "status":
+        devices = list(client.devices(site))
+        clients = list(client.clients(site))
+        return {"site_id": site or client.config.site_id,
+                "devices": len(devices),
+                "deviceStates": dict(Counter(str(d.get("state", "UNKNOWN")) for d in devices)),
+                "connectedClients": len(clients),
+                "clientTypes": dict(Counter(str(c.get("type", "UNKNOWN")) for c in clients))}
+    if command == "find":
+        if not args.selector.strip():
+            raise ValueError("Search text must not be empty")
+        result = []
+        for kind, items in (("device", client.devices(site)), ("client", client.clients(site))):
+            for item in items:
+                if matches(item, args.selector):
+                    row = {"kind": kind}
+                    row.update({key: item[key] for key in ("id", "name", "ipAddress", "macAddress", "state", "type") if key in item})
+                    result.append(row)
+        return result
+    if command == "client":
+        item = select(client.clients(site), args.selector, "client")
+        return dict(item, **client.client_details(item["id"], site))
+    if command in {"device", "ports"}:
+        item = select(client.devices(site), args.selector, "device")
+        detail = dict(item, **client.device_details(item["id"], site))
+        if command == "device":
+            return detail
+        # Some versions expose only the upstream device, without a port index.
+        # Preserve raw port fields and never guess client-to-port associations.
+        ports = detail.get("interfaces", {}).get("ports", [])
+        upstream_clients = [c for c in client.clients(site) if c.get("uplinkDeviceId") == item["id"]] if ports else []
+        mapped = all(c.get("uplinkPortIdx") is not None for c in upstream_clients)
+        return [dict(port, connectedClients=[c.get("name", c.get("macAddress", c["id"])) for c in upstream_clients
+                                            if c["uplinkPortIdx"] == port.get("idx")] if mapped else None)
+                for port in ports]
+    raise ValueError("Unsupported query command")
