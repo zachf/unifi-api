@@ -1,0 +1,8 @@
+{
+  "base_url": "https://opus2.local:11443",
+  "api_path": "/proxy/network/integration/v1",
+  "api_key": "REPLACE_WITH_YOUR_LOCAL_API_KEY",
+  "verify_ssl": true,
+  "timeout": 30,
+  "site_id": null
+}
