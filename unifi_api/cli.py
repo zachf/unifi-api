@@ -29,7 +29,7 @@ def build_parser():
     commands = parser.add_subparsers(dest="command")
     shell = commands.add_parser("shell", help="Start the interactive command prompt (also the default)")
     _output_option(shell, default=argparse.SUPPRESS)
-    for name in ("sites", "devices", "clients"):
+    for name in ("sites", "devices", "clients", "networks"):
         command = commands.add_parser(name, help=f"List all {name} (automatically paginated)")
         _output_option(command, default=argparse.SUPPRESS)
         command.add_argument("--limit", type=_positive, default=25, help="Page size")
@@ -77,6 +77,7 @@ _COMMANDS = [
     {"Command": "sites", "Description": "List sites"},
     {"Command": "devices [--site UUID]", "Description": "List adopted devices"},
     {"Command": "clients [--site UUID]", "Description": "List connected clients"},
+    {"Command": "networks [--site UUID]", "Description": "List networks"},
     {"Command": "request METHOD PATH", "Description": "Call an API endpoint; --param KEY=VALUE, --body FILE"},
     {"Command": "format table|json", "Description": "Set the session output format"},
     {"Command": "help [COMMAND]", "Description": "Show commands or command options"},
@@ -130,8 +131,8 @@ def interactive(client, output_format="table"):
                     print(render(_COMMANDS))
                     print("Add --json to any API command. List commands accept --limit and --filter.")
                     continue
-                if len(tokens) != 2 or tokens[1] not in {"sites", "devices", "clients", "request"}:
-                    raise ValueError("Usage: help [sites|devices|clients|request]")
+                if len(tokens) != 2 or tokens[1] not in {"sites", "devices", "clients", "networks", "request"}:
+                    raise ValueError("Usage: help [sites|devices|clients|networks|request]")
                 tokens = [tokens[1], "--help"]
             try:
                 args = parser.parse_args(tokens)

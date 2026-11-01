@@ -74,6 +74,28 @@ class CLITests(unittest.TestCase):
         self.assertIn("Switch", output)
         self.client.devices.assert_called_once_with(site_id="site-1", limit=25, filter=None)
 
+    def test_networks_command_paginates_and_supports_shell_and_json(self):
+        from unifi_api import Config, UniFiClient
+        client = UniFiClient(Config("https://controller.local", "test-key", site_id="default-site"))
+        client.request = Mock(side_effect=[
+            {"data": [{"name": "Office", "vlanId": 10}], "totalCount": 2},
+            {"data": [{"name": "Guest", "vlanId": 20}], "totalCount": 2},
+            {"data": [{"name": "Guest", "vlanId": 20}], "totalCount": 1},
+        ])
+        self.client = client
+        code, output, errors = self.run_cli(["networks", "--limit", "1"])
+        self.assertEqual(code, 0)
+        self.assertEqual(errors, "")
+        self.assertIn("Office", output)
+        self.assertIn("Guest", output)
+        self.assertEqual(client.request.call_args_list[1][0], ("GET", "sites/default-site/networks"))
+        self.assertEqual(client.request.call_args_list[1][1]["params"], {"offset": 1, "limit": 1})
+        code, output, errors = self.run_cli(["shell"], ["help networks", "networks --site other-site --json", "exit"])
+        self.assertEqual(code, 0)
+        self.assertEqual(errors, "")
+        self.assertIn('"vlanId": 20', output)
+        self.assertEqual(client.request.call_args[0], ("GET", "sites/other-site/networks"))
+
     def test_shell_recovers_from_errors_and_help(self):
         self.client.sites.side_effect = [APIError("Unavailable"), [{"name": "Recovered"}]]
         code, output, errors = self.run_cli(["shell"], ["", "unknown", "help sites", "sites", "sites", EOFError()])

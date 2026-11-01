@@ -109,3 +109,6 @@ class UniFiClient:
 
     def clients(self, site_id=None, **kwargs):
         return self.iter_items(self._site_path(site_id, "clients"), **kwargs)
+
+    def networks(self, site_id=None, **kwargs):
+        return self.iter_items(self._site_path(site_id, "networks"), **kwargs)

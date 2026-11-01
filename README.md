@@ -29,6 +29,7 @@ This opens the interactive `unifi>` command prompt and displays the available co
 unifi> sites
 unifi> devices --site YOUR_SITE_UUID
 unifi> clients --site YOUR_SITE_UUID --json
+unifi> networks --site YOUR_SITE_UUID
 unifi> format json
 unifi> sites
 unifi> format table
@@ -47,6 +48,8 @@ python -m unifi_api sites
 python -m unifi_api sites --json
 python -m unifi_api devices --site YOUR_SITE_UUID
 python -m unifi_api clients --site YOUR_SITE_UUID
+python -m unifi_api networks --site YOUR_SITE_UUID
+python -m unifi_api networks --site YOUR_SITE_UUID --json
 python -m unifi_api --config config.json request GET sites/YOUR_SITE_UUID/networks --param limit=25 --param offset=0
 ```
 
