@@ -12,7 +12,7 @@ from .client import APIError, UniFiClient
 from .config import ConfigError
 from .commands import READ_COMMANDS, Session, query
 from .export import export_csv
-from .output import render, render_status
+from .output import render, render_status, render_vertical
 
 
 def _positive(value):
@@ -142,6 +142,8 @@ def execute(client, args, session=None):
     }.get(args.command, ())
     if args.command == "status" and args.output_format == "table":
         print(render_status(result))
+    elif args.command == "stats" and args.output_format == "table":
+        print(render_vertical(result))
     else:
         print(render(result, args.output_format, exclude_columns=exclude_columns))
 

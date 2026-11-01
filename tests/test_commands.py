@@ -153,6 +153,18 @@ class CommandsTests(unittest.TestCase):
         self.assertEqual(result["cpuUtilizationPct"], 12.5)
         self.assertEqual(self.request.call_args[0][1], "sites/site-a/devices/switch-a/statistics/latest")
 
+    def test_stats_table_is_vertical_and_expands_lists(self):
+        def route(method, path, **kwargs):
+            if path.endswith("/statistics/latest"):
+                return {"cpuUtilizationPct": 12.5, "interfaces": {"radios": [{"frequencyGHz": 5, "txRetriesPct": 1.2}]}}
+            return self.route(method, path, **kwargs)
+        self.request.side_effect = route
+        code, out, err = self.run_cli(["stats", "Office Switch"])
+        self.assertEqual((code, err), (0, ""))
+        self.assertRegex(out, r"│ Field\s+│ Value")
+        self.assertRegex(out, r"│ cpuUtilizationPct\s+│ 12.5")
+        self.assertRegex(out, r"│ interfaces\.radios\[0\]\.txRetriesPct\s+│ 1.2")
+
     def test_info_does_not_require_a_site(self):
         self.client.config = Config("https://controller.local", "test-key")
         code, out, err = self.run_cli(["info", "--json"])

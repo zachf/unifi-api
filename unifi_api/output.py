@@ -62,6 +62,26 @@ def render(result, output_format="table", *, exclude_columns=()):
     return _table([result], exclude_columns)
 
 
+def _flatten_all(value, prefix=""):
+    # Unlike _flatten, also expand lists (e.g. per-radio or per-uplink stats) into indexed rows.
+    if isinstance(value, dict) and value:
+        items = value.items()
+    elif isinstance(value, list) and value and any(isinstance(v, (dict, list)) for v in value):
+        items = ((f"[{index}]", item) for index, item in enumerate(value))
+    else:
+        return {prefix: value}
+    result = {}
+    for key, item in items:
+        name = f"{prefix}{key}" if str(key).startswith("[") else f"{prefix}.{key}" if prefix else str(key)
+        result.update(_flatten_all(item, name))
+    return result
+
+
+def render_vertical(record):
+    """Render one record as Field/Value rows instead of one wide row."""
+    return _table([{"Field": key, "Value": value} for key, value in _flatten_all(record).items()])
+
+
 def render_status(summary):
     """Render the status snapshot as readable sections instead of one wide row."""
     lines = ["UNIFI NETWORK STATUS", f"Site: {_cell(summary['siteName'])}",
