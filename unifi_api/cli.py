@@ -60,7 +60,11 @@ def execute(client, args):
         if args.command != "sites":
             kwargs["site_id"] = args.site
         result = list(getattr(client, args.command)(**kwargs))
-    exclude_columns = {"id", "uplinkDeviceId", "access.type"} if args.command in {"sites", "clients"} else ()
+    exclude_columns = {
+        "sites": {"id", "uplinkDeviceId", "access.type"},
+        "clients": {"id", "uplinkDeviceId", "access.type"},
+        "devices": {"id"},
+    }.get(args.command, ())
     print(render(result, args.output_format, exclude_columns=exclude_columns))
 
 
@@ -76,13 +80,29 @@ _COMMANDS = [
     {"Command": "request METHOD PATH", "Description": "Call an API endpoint; --param KEY=VALUE, --body FILE"},
     {"Command": "format table|json", "Description": "Set the session output format"},
     {"Command": "help [COMMAND]", "Description": "Show commands or command options"},
-    {"Command": "exit / quit", "Description": "Close the prompt (or press Ctrl+Z then Enter on Windows)"},
+    {"Command": "exit / quit / Ctrl+C", "Description": "Close the prompt"},
 ]
 
 
+def _enable_history():
+    # Use native console editing on Windows; avoid third-party readline shims.
+    if sys.platform == "win32":
+        return
+    # Importing readline gives input() line editing and Up/Down history on Unix,
+    # including PyPy. Keep history in memory for this session only.
+    try:
+        import readline
+    except ImportError:
+        print("Command history unavailable: this Python build has no readline support.", file=sys.stderr)
+        return
+    if hasattr(readline, "set_auto_history"):
+        readline.set_auto_history(True)
+
+
 def interactive(client, output_format="table"):
+    _enable_history()
     parser = build_parser()
-    print("UniFi Network command prompt. Type help for commands; exit to quit.")
+    print("UniFi Network command prompt. Up/Down: command history. Type help for commands; exit or Ctrl+C to quit.")
     print(render(_COMMANDS))
     while True:
         try:
@@ -129,7 +149,8 @@ def interactive(client, output_format="table"):
             print()
             return 0
         except KeyboardInterrupt:
-            print("\nCommand cancelled. Type exit to quit.")
+            print()
+            return 130
         except (APIError, ValueError, OSError) as exc:
             _report_error(exc)
 

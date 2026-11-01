@@ -74,15 +74,32 @@ class CLITests(unittest.TestCase):
         self.assertIn("Switch", output)
         self.client.devices.assert_called_once_with(site_id="site-1", limit=25, filter=None)
 
-    def test_shell_recovers_from_errors_help_and_interrupts(self):
+    def test_shell_recovers_from_errors_and_help(self):
         self.client.sites.side_effect = [APIError("Unavailable"), [{"name": "Recovered"}]]
-        code, output, errors = self.run_cli(["shell"], ["", "unknown", "help sites", "sites", KeyboardInterrupt(), "sites", EOFError()])
+        code, output, errors = self.run_cli(["shell"], ["", "unknown", "help sites", "sites", "sites", EOFError()])
         self.assertEqual(code, 0)
         self.assertIn("invalid choice", errors)
         self.assertIn("Unavailable", errors)
         self.assertIn("--filter", output)
         self.assertIn("Recovered", output)
-        self.assertIn("Command cancelled", output)
+
+    def test_ctrl_c_exits_at_prompt(self):
+        code, _, _ = self.run_cli(["shell"], [KeyboardInterrupt(), "sites"])
+        self.assertEqual(code, 130)
+        self.client.sites.assert_not_called()
+
+    def test_ctrl_c_exits_during_command(self):
+        self.client.sites.side_effect = KeyboardInterrupt()
+        code, _, _ = self.run_cli(["shell"], ["sites", "sites"])
+        self.assertEqual(code, 130)
+        self.client.sites.assert_called_once()
+
+    def test_shell_enables_readline_history(self):
+        readline = Mock()
+        with patch.dict("sys.modules", {"readline": readline}), patch("sys.platform", "linux"):
+            code, _, _ = self.run_cli(["shell"], ["exit"])
+        self.assertEqual(code, 0)
+        readline.set_auto_history.assert_called_once_with(True)
 
     def test_shell_json_and_persistent_format(self):
         code, output, _ = self.run_cli(["shell"], ["sites --json", "format json", "sites", "format table", "sites", "quit"])

@@ -1,6 +1,6 @@
 # UniFi Network API client
 
-A Python 3.10+ client and command line tool for the local UniFi Network REST API. No runtime dependencies are required. The API key is loaded from a JSON config file and sent in the `X-API-Key` header.
+A Python 3.7+ client and command line tool for the local UniFi Network REST API, including PyPy 3.7. No runtime dependencies are required. The API key is loaded from a JSON config file and sent in the `X-API-Key` header.
 
 ## Setup
 
@@ -36,7 +36,9 @@ unifi> help request
 unifi> exit
 ```
 
-Use `help` to display the command table, `help COMMAND` for options, and `exit` or `quit` to close the prompt. Ctrl+C cancels the current command; EOF closes the prompt (Ctrl+Z then Enter on Windows). Command errors leave the prompt open. Quote arguments containing spaces, including Windows file paths.
+Use `help` to display the command table, `help COMMAND` for options, and `exit`, `quit`, or Ctrl+C to close the prompt. Ctrl+C also exits during a running command, with exit code 130. EOF closes the prompt (Ctrl+D on Ubuntu; Ctrl+Z then Enter on Windows). Command errors leave the prompt open. Quote arguments containing spaces, including Windows file paths.
+
+Use Up/Down to navigate previously entered commands and edit them before pressing Enter. On Ubuntu, line editing and history use Python's built-in `readline` module; Windows consoles provide native input history. History is kept for the current process only and is not saved to disk.
 
 Existing commands also work directly:
 

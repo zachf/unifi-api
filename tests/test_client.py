@@ -25,12 +25,12 @@ class ClientTests(unittest.TestCase):
     def test_request_auth_query_and_body(self):
         self.respond(b'{"id":"created"}')
         self.assertEqual(self.client.request("POST", "/sites/a/networks", params={"filter": "name.eq('Guest WiFi')"}, body={"name": "Guest"}), {"id": "created"})
-        req = self.opener.open.call_args.args[0]
+        req = self.opener.open.call_args[0][0]
         self.assertEqual(req.get_header("X-api-key"), "secret-test-key")
         self.assertTrue(req.full_url.startswith("https://controller.local:11443/proxy/network/integration/v1/sites/a/networks?"))
         self.assertIn("Guest+WiFi", req.full_url)
         self.assertEqual(json.loads(req.data), {"name": "Guest"})
-        self.assertEqual(self.opener.open.call_args.kwargs["timeout"], 30)
+        self.assertEqual(self.opener.open.call_args[1]["timeout"], 30)
 
     def test_pagination_uses_actual_page_length(self):
         self.client.request = Mock(side_effect=[
@@ -38,7 +38,7 @@ class ClientTests(unittest.TestCase):
             {"data": [{"id": 2}], "totalCount": 2},
         ])
         self.assertEqual(list(self.client.sites(limit=25)), [{"id": 1}, {"id": 2}])
-        self.assertEqual(self.client.request.call_args.kwargs["params"]["offset"], 1)
+        self.assertEqual(self.client.request.call_args[1]["params"]["offset"], 1)
 
     def test_missing_total_stops_on_empty_page(self):
         self.client.request = Mock(side_effect=[{"data": [1]}, {"data": []}])
@@ -72,7 +72,7 @@ class ClientTests(unittest.TestCase):
         client = UniFiClient(Config("https://controller.local", "key", site_id="site-uuid"))
         client.request = Mock(return_value={"data": []})
         self.assertEqual(list(client.devices()), [])
-        self.assertEqual(client.request.call_args.args[1], "sites/site-uuid/devices")
+        self.assertEqual(client.request.call_args[0][1], "sites/site-uuid/devices")
 
 
 class ConfigTests(unittest.TestCase):
